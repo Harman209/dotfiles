@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Gale CLI launcher: switches directory to the Gale vault and launches Antigravity CLI
+cd "$HOME/gale" || exit 1
+exec agy "$@"

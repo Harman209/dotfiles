@@ -1,0 +1,22 @@
+#!/bin/bash
+set -o pipefail
+
+if [[ "$1" == "default" && "$2" == "agent" ]]; then
+  shift 2
+  exec "$HOME/.local/bin/omarchy-default-agent" "$@"
+fi
+
+if [[ "$1" == "agent" ]]; then
+  if [[ "$2" == "" || "$2" == "--inline" || "$2" == "--pick" || "$2" == "--prompt"* ]]; then
+    shift 1
+    exec "$HOME/.local/bin/omarchy-agent" "$@"
+  fi
+fi
+
+if [[ "$1" == "screensaver" ]]; then
+  shift 1
+  exec "$HOME/.local/bin/omarchy-screensaver" "$@"
+fi
+
+exec /usr/bin/omarchy "$@"
+

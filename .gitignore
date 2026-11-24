@@ -1,0 +1,13 @@
+# backup files
+*.bak*
+*.old
+*~
+
+# os and editor garbage
+.DS_Store
+Thumbs.db
+.cache/
+.npm/
+
+# runtime locks
+*.lock

@@ -1,0 +1,55 @@
+#!/bin/bash
+set -euo pipefail
+
+BRANDING_DIR="$HOME/.config/omarchy/branding"
+mkdir -p "$BRANDING_DIR"
+
+NITJ_FILE="$BRANDING_DIR/screensaver-nitj.txt"
+DEFAULT_FILE="$BRANDING_DIR/screensaver-default.txt"
+TARGET_FILE="$BRANDING_DIR/screensaver.txt"
+
+# Ensure screensaver-nitj.txt exists
+if [[ ! -f "$NITJ_FILE" ]]; then
+  echo "back in a few mins" > "$NITJ_FILE"
+fi
+
+# Ensure screensaver-default.txt exists
+if [[ ! -f "$DEFAULT_FILE" ]]; then
+  if [[ -f "$TARGET_FILE" ]] && ! cmp -s "$TARGET_FILE" "$NITJ_FILE"; then
+    cp "$TARGET_FILE" "$DEFAULT_FILE"
+  else
+    cp "${OMARCHY_PATH:-/usr/share/omarchy}/logo.txt" "$DEFAULT_FILE"
+  fi
+fi
+
+sync_branding() {
+  local ssid=""
+  ssid=$(nmcli -t -f TYPE,NAME connection show --active 2>/dev/null | grep -E '^802-11-wireless:|^wifi:' | head -n1 | cut -d: -f2- || true)
+  if [[ -z "$ssid" ]]; then
+    ssid=$(iwgetid -r 2>/dev/null || true)
+  fi
+
+  local normalized
+  normalized=$(echo "$ssid" | tr -d ' -_' | tr '[:upper:]' '[:lower:]')
+  local pattern='^[nN][iI][tT][jJ][- _]?[wW][iI][fF][iI]$'
+
+  if [[ "$normalized" == "nitjwifi" || "$ssid" =~ $pattern ]]; then
+    if ! cmp -s "$NITJ_FILE" "$TARGET_FILE" 2>/dev/null; then
+      cp "$NITJ_FILE" "$TARGET_FILE"
+      echo "[$(date '+%Y-%m-%d %H:%M:%S')] Connected to NITJ WiFi ($ssid). Screensaver set to: $(cat "$NITJ_FILE")"
+    fi
+  else
+    if ! cmp -s "$DEFAULT_FILE" "$TARGET_FILE" 2>/dev/null; then
+      cp "$DEFAULT_FILE" "$TARGET_FILE"
+      echo "[$(date '+%Y-%m-%d %H:%M:%S')] Not on NITJ WiFi (SSID: '$ssid'). Screensaver set to default Omarchy."
+    fi
+  fi
+}
+
+# Initial sync
+sync_branding
+
+# Continuous monitor of NetworkManager events
+nmcli monitor 2>/dev/null | while read -r _; do
+  sync_branding
+done

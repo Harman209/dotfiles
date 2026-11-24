@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# Toggle keeping laptop awake when the lid is closed
+
+UNIT="lid-awake.service"
+
+is_active() {
+  systemctl --user is-active --quiet "$UNIT"
+}
+
+enable_awake() {
+  systemd-run --user --unit="$UNIT" \
+    --description="Keep laptop awake on lid close" \
+    --property=PartOf=graphical-session.target \
+    systemd-inhibit --no-ask-password --what=handle-lid-switch --mode=block \
+    --who="Lid Awake Toggle" --why="User requested laptop stay awake with lid closed" sleep infinity >/dev/null 2>&1
+  notify-send -u normal -a "System" "Lid sleep disabled" "Laptop will stay awake when lid is closed."
+  echo "stay-awake enabled (lid sleep disabled)"
+}
+
+disable_awake() {
+  systemctl --user stop "$UNIT" >/dev/null 2>&1
+  notify-send -u normal -a "System" "Lid sleep enabled" "Laptop will suspend when lid is closed."
+  echo "stay-awake disabled (lid sleep enabled)"
+}
+
+case "${1:-toggle}" in
+  toggle|"")
+    if is_active; then
+      disable_awake
+    else
+      enable_awake
+    fi
+    ;;
+  on|awake|stay-awake)
+    if is_active; then
+      echo "stay-awake already active"
+    else
+      enable_awake
+    fi
+    ;;
+  off|sleep|allow-sleep)
+    if is_active; then
+      disable_awake
+    else
+      echo "stay-awake already inactive"
+    fi
+    ;;
+  status)
+    if is_active; then
+      echo "active (laptop stays awake on lid close)"
+    else
+      echo "inactive (laptop suspends on lid close)"
+    fi
+    ;;
+  *)
+    echo "Usage: toggle-lid-sleep [toggle|on|off|status]" >&2
+    exit 1
+    ;;
+esac
